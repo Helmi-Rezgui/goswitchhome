@@ -53,7 +53,7 @@ router.post("/", async (req, res) => {
     name: req.body.name,
     lastName: req.body.lastName,
     email: req.body.email,
-    passwordHash: bcrypt.hashSync(req.body.password, 10), //the "10" is a salt of bcrypt
+    passwordHash: bcrypt.hashSync(req.body.password, 10),  //the "10" is a salt of bcrypt
     phone: req.body.phone,
     
   });

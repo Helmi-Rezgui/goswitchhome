@@ -10,12 +10,9 @@ const api= process.env.API_URL;
 
 
 //Routes
-// const productsRouter = require('./routes/products');
-// const categoriesRouter = require('./routes/categories');
-// const ordersRouter = require('./routes/orders');
+
 const usersRouter = require('./Backend/routes/users');
-// const errorHandler= require('./helpers/error-handler')
-// const feedbacksRouter= require('./routes/feedbacks')
+
 
 
 
@@ -27,11 +24,9 @@ app.use(authJwt());
 
 
 
-// app.use(`${api}/products`, productsRouter);
-// app.use(`${api}/categories`, categoriesRouter);
-// app.use(`${api}/orders`, ordersRouter);
+
 app.use(`${api}/users`, usersRouter);
-// app.use(`${api}/feedbacks`, feedbacksRouter);
+
 
 
 

@@ -7,7 +7,6 @@ const userSchema = mongoose.Schema({
   passwordHash: { type: String, required: true },
   phone: { type: Number, required: true },
   isVerified: { type: Boolean, default: false },
-
 });
 
 
