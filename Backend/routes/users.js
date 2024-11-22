@@ -4,6 +4,59 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const { Home } = require("../models/home");
+
+
+router.post('/save-post/:homeId', async (req, res) => {
+  const userId = req.auth.userId; 
+  const homeId = req.params.homeId;
+
+  try {
+    // Find the home by its ID
+    const home = await Home.findById(homeId);
+    if (!home) {
+      return res.status(404).send({ message: 'Home not found.' });
+    }
+
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).send({ message: 'User not found.' });
+    }
+    if (!Array.isArray(user.savedPosts)) {
+      user.savedPosts = []; // Initialize if undefined
+    }
+    
+    
+    const homeIndex = user.savedPosts.indexOf(homeId);
+    if (homeIndex !== -1) {
+      // Home already saved, so unsave it
+      user.savedPosts.splice(homeIndex, 1);
+      await user.save();
+      return res.status(200).send({ message: 'Home unsaved successfully.', savedPosts: user.savedPosts });
+    } else {
+      // Home not saved, so save it
+      user.savedPosts.push(homeId);
+      await user.save();
+      return res.status(200).send({ message: 'Home saved successfully.', savedPosts: user.savedPosts });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: 'Server error.' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 router.get("/verify-email", async (req, res) => {
