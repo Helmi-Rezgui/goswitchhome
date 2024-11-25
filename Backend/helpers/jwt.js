@@ -16,6 +16,9 @@ function authJwt() {
       `${api}/users/verify-email`,
       `${api}/users/reset-password`,
       `${api}/users/forgot-password`,
+      //`${api}/homes/home`,
+      // "/"
+      
       
       
 
