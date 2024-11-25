@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { Request } = require('../models/request'); // Import the Request model
-const { User } = require('../models/user'); // Assuming you have a User model to check recipient
-const { Home } = require('../models/home'); // Assuming you have a Home model to check home IDs
+const { Request } = require('../models/request');
+const { User } = require('../models/user'); 
+const { Home } = require('../models/home'); 
 const  {Message} = require('../models/message');
  const clients = require('./clients');
 // POST route to create a new request
 router.post('/', async (req, res) => {
     try {
-        // Step 1: Extract sender from the req.auth (JWT token should have populated this)
         const sender = req.auth.userId; // Get the sender's userId from req.auth
 
-        // Step 2: Validate recipient ID - Check if the recipient exists in the database
         const recipient = await User.findById(req.body.recipient);
         if (!recipient) {
             return res.status(400).send({ message: 'Invalid recipient ID.' });
@@ -27,7 +25,6 @@ router.post('/', async (req, res) => {
             return res.status(400).send({ message: 'You cannot resend a request within 7 days of rejection.' });
         }
 
-        // Step 3: Validate homeOffered ID - Check if the homeOffered exists in the database
         const homeOffered = await Home.findById(req.body.homeOffered); // REVIEW: 
         if (!homeOffered) {
             return res.status(400).send({ message: 'Invalid homeOffered ID.' }); 
@@ -37,13 +34,11 @@ router.post('/', async (req, res) => {
             return res.status(400).send({ message: 'You can only send a request for a home you own.' });
         }
 
-        // Step 4: Validate homeRequested ID - Check if the homeRequested exists in the database
         const homeRequested = await Home.findById(req.body.homeRequested);
         if (!homeRequested) {
             return res.status(400).send({ message: 'Invalid homeRequested ID.' });
         }
 
-        // Step 5: Create the request
         const request = new Request({
             sender: sender, // Use sender from req.auth
             recipient: req.body.recipient,
@@ -51,11 +46,22 @@ router.post('/', async (req, res) => {
             homeRequested: req.body.homeRequested,
         });
 
-        // Step 6: Save the request to the database
         await request.save();
+        const user = await User.findById(`${sender}`)
+
+        const recipientSocket = clients.get(req.body.recipient.toString());
+        if (recipientSocket) {
+            const notification = {
+                type: 'newRequest',
+                sender: req.auth.userId,
+                message: `You have received a new request from  ${user.name}.`,
+                requestId: request._id,
+                timestamp: new Date(),
+            };
+            recipientSocket.send(JSON.stringify(notification));
+        }
     
-        // Step 7: Return a success response with the created request
-        res.status(201).send(request); // 201 indicates successful resource creation
+        res.status(201).send(request); 
     } catch (error) {
         // Handle errors
         console.error(error);
