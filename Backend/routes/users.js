@@ -121,6 +121,46 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+  /**
+ * @swagger
+ * /users/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: First name of the user
+ *               lastName:
+ *                 type: string
+ *                 description: Last name of the user
+ *               email:
+ *                 type: string
+ *                 description: Email address of the user
+ *               password:
+ *                 type: string
+ *                 description: User's password
+ *               phone:
+ *                 type: string
+ *                 description: Phone number of the user
+ *             required:
+ *               - name
+ *               - lastName
+ *               - email
+ *               - password
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: User registration failed or email already exists
+ */
 router.post("/register", async (req, res) => {
   
     let existingUser  = await User.findOne({ email: req.body.email });
@@ -166,6 +206,8 @@ router.post("/register", async (req, res) => {
       "message":"User registration failed."});
   }
 });
+
+
  
 
 router.put("/:id", async (req, res) => {
@@ -193,6 +235,50 @@ router.put("/:id", async (req, res) => {
 
 
 //Auth 
+/**
+ * @swagger
+ * /users/login:
+ *   post:
+ *     summary: Log in a user
+ *     tags: [users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: User's email
+ *               password:
+ *                 type: string
+ *                 description: User's password
+ *             required:
+ *               - email
+ *               - password
+ *     responses:
+ *       200:
+ *         description: User logged in successfully with a JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: string
+ *                   description: Logged-in user's email
+ *                 token:
+ *                   type: string
+ *                   description: JWT token
+ *       400:
+ *         description: Invalid email or password
+ *       403:
+ *         description: Email not verified
+ *       404:
+ *         description: User not found
+ */
+
 router.post('/login', async (req, res) => {
 const user = await User.findOne({email: req.body.email})
 const secret = process.env.secret
@@ -230,6 +316,54 @@ router.delete('/:id',  (req , res) => {
 )
  
 
+/**
+ * @swagger
+ * /users/forgot-password:
+ *   post:
+ *     summary: Request a password reset link
+ *     tags: [users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email address of the user
+ *             required:
+ *               - email
+ *     responses:
+ *       200:
+ *         description: Password reset link sent to the user's email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password reset link sent to your email.
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: User not found.
+ *       500:
+ *         description: Server error
+ */
 
 router.post(`/forgot-password`, async (req, res) => {
   try {
@@ -262,6 +396,73 @@ router.post(`/forgot-password`, async (req, res) => {
   }
 });
 
+
+/**
+ * @swagger
+ * /users/reset-password:
+ *   post:
+ *     summary: Reset the user's password
+ *     tags: [users]
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         description: The reset token sent to the user's email
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 description: The new password for the user
+ *             required:
+ *               - newPassword
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Password reset successfully.
+ *       400:
+ *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid or expired token.
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: User not found.
+ */
 
 // Route for resetting password using reset token
 router.post("/reset-password", async (req, res) => {

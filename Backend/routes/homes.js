@@ -1,8 +1,10 @@
-const {Home} = require("../models/home")
+ const {Home} = require("../models/home")
 const express = require("express");
 const router = express.Router();
 const multer = require("multer")
-const { User } = require('../models/user'); 
+const { User } = require('../models/user');
+const fs = require('fs');
+const path = require('path');
 
 
 
@@ -32,44 +34,82 @@ const storage = multer.diskStorage({
       cb(null, `${filename}-${Date.now()}.${extension}`);
     }
   })
-  const uploadOptions = multer({storage: storage})
+const uploadOptions = multer({ storage: storage }).fields([
+    { name: 'image', maxCount: 1 },   // Single image field
+    { name: 'images', maxCount: 5 }    // Multiple images (max 5 files)
+]);
 
 
 
- 
-router.post("/home", uploadOptions.single('image') , async (req, res)=>{
-    //file upload
-   const file = req.file;
-   if (!file) return res.status(400).send('No image in the request')
+router.post("/home", uploadOptions, async (req, res) => {
+    // Check for file(s) uploaded in the request
+    const image = req.files['image'] ? req.files['image'][0] : null;  // Single image
+    const images = req.files['images'] ? req.files['images'] : [];    // Multiple images
 
-  
- const filename = req.file.filename;
- const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`
-  const user= req.auth.userId;
+    // Handle missing image or images fields
+    if (!image && images.length === 0) {
+        return res.status(400).send('No image or images provided');
+    }
+
+    // Prepare the file paths for image(s)
+    let imageUrl = '';
+    if (image) {
+        const filename = image.filename;
+        const basePath = `${req.protocol}`;//${req.get('host')}/public/uploads/;
+        imageUrl = `${basePath}${filename}`;
+    }
+
+    // Prepare image URLs for multiple images
+    const imageUrls = images.map(file => {
+        const filename = file.filename;
+        const basePath = `${req.protocol}`;//${req.get('host')}/public/uploads/;
+        return `${basePath}${filename}`;
+    });
+
+    // Get the user from the request (assuming authentication is set up)
+    const user = req.auth.userId;
+
+    // Create a new home object with provided data
     let home = new Home({
-       owner : user,
+        owner: user,
         location: req.body.location,
         size: req.body.size,
         amenities: req.body.amenities,
-        image : `${basePath}${filename}`, //"http://localhost:3000/public/uploads/image-232323"
-        images : req.body.images,
+        image: imageUrl,  // single image URL
+        images: imageUrls,  // multiple images URLs
         availability: req.body.availability,
-    })
-    console.log("image")
+    });
+
+    // Save the home to the database
     home = await home.save();
-    if (!home) return res.status(400).send("home cannot be created");
+    if (!home) return res.status(400).send("Home cannot be created");
+
+    // Respond with the created home object
     res.send(home);
-}
-)
+});
 
 
 
-router.get(`/`, async (req, res) => {
-  const homeList = await Home.find();
-  if (!homeList) {
-    return res.status(500).json({ success: false });
-  }
-  res.send(homeList);
+
+router.get("/", async (req, res) => {
+    const homeList = await Home.find();
+    if (!homeList) {
+        return res.status(500).json({ success: false });
+    }
+
+    const formattedHomes = homeList.map(home => {
+        const filePath = path.join(__dirname, '../public/uploads/', home.image.split('/').pop());
+        const imageData = fs.existsSync(filePath)
+            ? fs.readFileSync(filePath, { encoding: 'base64' })
+            : null;
+
+        return {
+            ...home._doc,
+            image: imageData ? `data:image/jpeg;base64,${imageData}` : null,
+        };
+    });
+
+    res.send(formattedHomes);
 });
 
 router.get("/:id", async (req, res) => {

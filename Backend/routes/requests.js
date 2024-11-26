@@ -24,7 +24,22 @@ router.post('/', async (req, res) => {
         if (recentRejectedRequest) {
             return res.status(400).send({ message: 'You cannot resend a request within 7 days of rejection.' });
         }
-
+        const acceptedRequest = await Request.findOne({
+            sender,
+            recipient: req.body.recipient,
+            status: 'accepted', 
+        })
+        if(acceptedRequest){
+            return res.status(400).send({ message: 'request already accepted . A message has been sent to initiate communication.' });
+        }
+        // const pendingRequest = await Request.findOne({
+        //     sender,
+        //     recipient: req.body.recipient,
+        //     status: 'pending', 
+        // })
+        // if(pendingRequest){
+        //     return res.status(400).send({ message: 'request already sent . you will get notified about the recipent answer' });
+        // }
         const homeOffered = await Home.findById(req.body.homeOffered); // REVIEW: 
         if (!homeOffered) {
             return res.status(400).send({ message: 'Invalid homeOffered ID.' }); 
@@ -129,10 +144,12 @@ router.patch('/requests/:id', async (req, res) => {
 
         request.status = status;
         await request.save();
+        const sender =  req.auth.userId;
+        const user = await User.findById(`${sender}`)
 
         if (status === 'accepted') {
             // Create a system-generated message
-            const messageContent = 'You can now communicate to arrange further details.';
+            const messageContent = `your request to ${user.name} just got accepted . You can now communicate to arrange further details.`;
             const systemMessage = new Message({
                 sender: userId, // System or recipient as the sender
                 recipient: request.sender,
@@ -183,4 +200,26 @@ router.patch('/requests/:id', async (req, res) => {
         res.status(500).send({ message: `Error updating request status: ${error.message}` });
     }
 });
+router.delete('/:id', async (req, res) => {
+    try {
+        const userId = req.auth.userId;
+
+        const request = await Request.findById(req.params.id);
+        if (!request) {
+            return res.status(404).send({ message: 'Request does not exist.' });
+        }
+
+        if (request.sender.toString() !== userId && request.recipient.toString() !== userId) {
+            return res.status(403).send({ message: 'You are not authorized to delete this request.' });
+        }
+
+        await request.deleteOne();
+
+        res.status(200).send({ message: 'Request deleted successfully.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: `Error deleting request: ${error.message}` });
+    }
+});
+
 module.exports = router;
